@@ -44,4 +44,7 @@ swagger:
   enable: false
   path: documentation
 
-
+game:
+  developerId: atGames@0002
+  returnUrl: https://game.1pg1.com/jump/jumper.html
+  rtpLevel: 11

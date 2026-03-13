@@ -67,20 +67,6 @@ export class AppConfigService {
     };
   }
 
-  get frontendJwtConfig(): JwtModuleOptions & { expires?: number } {
-    return {
-      secret: this.get('frontend_jwt.secret'),
-      expiresIn: this.get<number>('frontend_jwt.expires'),
-    };
-  }
-
-  get backendJwtConfig(): JwtModuleOptions & { expires?: number } {
-    return {
-      secret: this.get('backend_jwt.secret'),
-      expiresIn: this.get<number>('backend_jwt.expires'),
-    };
-  }
-
   get typeormConfig(): TypeOrmModuleOptions {
     // LOG_ORM_ENABLE config if use array must be a json string
     const loggerOptions: LoggerOptions = this.get<boolean | string | string[]>(

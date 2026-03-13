@@ -51,30 +51,30 @@ export class DynamicEntityRepo {
   private schemaCache = new Map<string, EntitySchema>();
 
   constructor(private readonly configService: AppConfigService) {
-    const entities: EntitySchema[] = [];
-    const tags = getQuarterTableTags(2024, 4);
+    // const entities: EntitySchema[] = [];
+    // const tags = getQuarterTableTags(2024, 4);
 
-    for (const tag of tags) {
-      const betTable = TABLE_PREFIX.bet + tag;
-      const fundsTable = TABLE_PREFIX.funds + tag;
+    // for (const tag of tags) {
+    //   const betTable = TABLE_PREFIX.bet + tag;
+    //   const fundsTable = TABLE_PREFIX.funds + tag;
 
-      const betSchema = createEntityBetRecordSchema(betTable);
-      const fundsSchema = createEntityFundsRecordSchema(fundsTable);
+    //   const betSchema = createEntityBetRecordSchema(betTable);
+    //   const fundsSchema = createEntityFundsRecordSchema(fundsTable);
 
-      entities.push(betSchema, fundsSchema);
-      this.schemaCache.set(betTable, betSchema);
-      this.schemaCache.set(fundsTable, fundsSchema);
-    }
+    //   entities.push(betSchema, fundsSchema);
+    //   this.schemaCache.set(betTable, betSchema);
+    //   this.schemaCache.set(fundsTable, fundsSchema);
+    // }
 
-    this.dataSource = new DataSource({
-      ...this.configService.dynamicTypeormConfig,
-      entities,
-      synchronize: false,
-    });
+    // this.dataSource = new DataSource({
+    //   ...this.configService.dynamicTypeormConfig,
+    //   entities,
+    //   synchronize: false,
+    // });
 
-    this.dataSource.initialize().then(() => {
-      console.log(`✅ 初始化完成：动态注册 ${entities.length} 张季度表`);
-    });
+    // this.dataSource.initialize().then(() => {
+    //   console.log(`✅ 初始化完成：动态注册 ${entities.length} 张季度表`);
+    // });
   }
 
   /**

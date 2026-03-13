@@ -1,15 +1,28 @@
+import { HttpModule } from '@nestjs/axios';
 import { Global, Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
-import { TransformInterceptor } from '../interceptors/transform.interceptor';
+import { JwtModule } from '@nestjs/jwt';
+import { AppConfigService } from './services/app-config.service';
+import { AppGeneralService } from './services/app-general.service';
+import { AppLoggerService } from './services/app-logger.service';
+import { EventLoopMonitorService } from './services/event-loop-monitor.service';
+
+const providers = [
+  AppConfigService,
+  AppGeneralService,
+  AppLoggerService,
+  EventLoopMonitorService,
+];
 
 @Global()
 @Module({
-  providers: [
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: TransformInterceptor,
-    },
+  providers,
+  imports: [
+    HttpModule,
+    JwtModule.registerAsync({
+      useFactory: (configService: AppConfigService) => configService.jwtConfig,
+      inject: [AppConfigService],
+    }),
   ],
-  exports: [],
+  exports: [...providers, HttpModule, JwtModule],
 })
 export class SharedModule {}

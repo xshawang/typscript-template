@@ -45,4 +45,7 @@ swagger:
   enable: true
   path: documentation
 
-
+game:
+  developerId: atGames@0002
+  returnUrl: https://google.com
+  rtpLevel: 11

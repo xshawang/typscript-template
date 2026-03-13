@@ -11,7 +11,7 @@ application:
   # minimum internal requirements protect id
   protectSysPermmenuMaxId: 44
   protectSysDictionaryMaxId: 4
-  domain: https://scenic-rental.com
+  domain: https://game.gameskkys.com
 
 
 logger:
@@ -19,25 +19,17 @@ logger:
   maxFiles: 31
 
 jwt:
-  secret: scenic_rental_secret_key
-  expires: 86400
-
-frontend_jwt:
-  secret: frontend_scenic_rental_secret_key
-  expires: 86400
-
-backend_jwt:
-  secret: backend_scenic_rental_admin_secret_key
+  secret: dubaidubaidubaiqq
   expires: 86400
 
 redis:
-  globalPrefix: scenic_rental
+  globalPrefix: tiger
   host: 127.0.0.1
   port: 6379
   password: 
-  db: 0
+  db: 9
   queue:
-    db: 1
+    db: 10
 
 
 awsdb:
@@ -45,8 +37,8 @@ awsdb:
   slave: 127.0.0.1
   port: 3306
   username: root
-  password: root123
-  database: scenic_rental_db
+  password: 876543219
+  database: tiger8
   logging: true
   synchronize: false  
 
@@ -54,4 +46,7 @@ swagger:
   enable: true
   path: documentation
 
-
+game:
+  developerId: atGames@0002
+  returnUrl: https://google.com
+  rtpLevel: 11

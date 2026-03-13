@@ -1,0 +1,48 @@
+application:
+  port: 7004
+  # using in router prefix、redis prefix
+  name: /
+  # specify id as the root administrator
+  rootUserId: 1
+  # user password salt
+  userPwdSalt: K8i8mTfc5sTX111G
+  # user default password
+  userDefaultPwd: 123456
+  # minimum internal requirements protect id
+  protectSysPermmenuMaxId: 44
+  protectSysDictionaryMaxId: 4
+  domain: https://game.gameskkys.com
+
+
+logger:
+  level: info
+  maxFiles: 31
+
+jwt:
+  secret: dubaidubaidubaiqq
+  expires: 31536000
+
+redis:
+  globalPrefix: tiger
+  host: 127.0.0.1
+  port: 6379
+  password: '1314Nfb'
+  db: 0
+  queue:
+    db: 1
+
+awsdb:
+  master: 127.0.0.1
+  slave: 127.0.0.1
+  port: 3306
+  username: ruoyi
+  password: ruoyiadmin
+  database: tiger8
+  logging: false
+  synchronize: false
+
+swagger:
+  enable: true
+  path: documentation
+
+

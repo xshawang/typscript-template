@@ -1,10 +1,13 @@
-import { Controller, Post, Body, Req, Res, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, HttpCode, HttpStatus, Get, Param, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { SkipAuth } from '../../decorators/skip-auth.decorator';
 import { BaseResponse } from '../../common/response-wrapper';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LoginDto } from './dto/login.dto';
+import * as qrcode from 'qrcode';
+import { Readable } from 'stream';
+
 
 @ApiTags('User')
 @Controller('user')
@@ -51,6 +54,55 @@ export class UserController {
       }, '登录成功');
     } catch (error) {
       return BaseResponse.error(error.message || '登录失败', -1);
+    }
+  }
+
+  @Get('qrcode')
+  @SkipAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '生成二维码' })
+  @ApiResponse({ status: 200, description: '生成成功' })
+  @ApiQuery({ name: 'channel', required: false, example: 1001, description: '景区channel' })
+  async generateQRCode(
+    @Res() res: FastifyReply,
+    @Query('channel') channel: string = '1001',
+  ): Promise<void> {
+    try {
+      // 构建分享链接
+      const shareUrl = `http://192.168.1.3:7004/api/user/share/${channel}`;
+      
+      // 生成二维码图片的 Buffer
+      const qrBuffer = await qrcode.toBuffer(shareUrl, {
+        width: 200,
+        margin: 2,
+      });
+      
+      // 设置响应头
+      res.header('Content-Type', 'image/png');
+      res.header('Content-Length', qrBuffer.length);
+      
+      // 返回二维码图片
+      res.send(qrBuffer);
+    } catch (error) {
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({ message: '生成二维码失败' });
+    }
+  }
+
+  @Get('share/:channel')
+  @SkipAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '分享链接' })
+  @ApiResponse({ status: 200, description: '访问成功' })
+  async share(
+    @Param('channel') channel: string,
+  ): Promise<BaseResponse<any>> {
+    try {
+      return BaseResponse.success({
+        channel,
+        message: `欢迎访问景区 ${channel} 的分享页面`,
+      }, '访问成功');
+    } catch (error) {
+      return BaseResponse.error(error.message || '访问失败', -1);
     }
   }
 }

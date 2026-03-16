@@ -34,7 +34,7 @@ set -e
 
 # # 构建
 echo "🏗️ 正在构建..."
-npm run build
+pnpm run build
 
 # 重启 pm2
 echo "🔄 重启 pm2..."

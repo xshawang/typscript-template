@@ -1,7 +1,7 @@
 application:
   port: 7004
   # using in router prefix、redis prefix
-  name: /
+  name: /api
   # specify id as the root administrator
   rootUserId: 1
   # user password salt
@@ -36,15 +36,15 @@ awsdb:
   port: 3306
   username: ruoyi
   password: "ruoyiadmin"
-  database: tiger8
+  database: physical
   logging: false
   synchronize: false
 
 swagger:
-  enable: false
+  enable: true
   path: documentation
 
-game:
-  developerId: atGames@0002
-  returnUrl: https://game.1pg1.com/jump/jumper.html
-  rtpLevel: 11
+# game:
+#   developerId: atGames@0002
+#   returnUrl: https://game.1pg1.com/jump/jumper.html
+#   rtpLevel: 11

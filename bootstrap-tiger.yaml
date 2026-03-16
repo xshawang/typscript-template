@@ -36,7 +36,7 @@ awsdb:
   port: 3306
   username: tiger
   password: "tiger8Abc"
-  database: tiger8
+  database: physical
   logging: false
   synchronize: false
 

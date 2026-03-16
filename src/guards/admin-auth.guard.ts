@@ -15,7 +15,7 @@ import { RedisService } from '@liaoliaots/nestjs-redis';
 import { UserOnlineCachePrefix } from '/@/constants/cache';
 
 @Injectable()
-export class Authguard implements CanActivate {
+export class AdminAuthGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private jwtService: JwtService,
@@ -39,9 +39,22 @@ export class Authguard implements CanActivate {
     if (isEmpty(token)) {
       throw new UnauthorizedException();
     }
-    console.log('请求token:', token);
+
+    // Check if token is admin token (starts with 'admin_')
+    if (!token.startsWith('admin_')) {
+      throw new UnauthorizedException('Invalid admin token');
+    }
+
+    // Remove 'admin_' prefix for verification
+    const actualToken = token.substring('admin_'.length);
+
     try {
-      request.authUser = this.jwtService.verify(token);
+      const payload = this.jwtService.verify(actualToken);
+      // Ensure the payload has isAdmin flag
+      if (!payload.isAdmin) {
+        throw new UnauthorizedException('Invalid admin token');
+      }
+      request.authUser = payload;
     } catch {
       throw new UnauthorizedException();
     }
@@ -54,7 +67,7 @@ export class Authguard implements CanActivate {
     // check is expired
     const cacheToken = await this.redisService
       .getClient()
-      .get(`${UserOnlineCachePrefix}${request.authUser.uid}`);
+      .get(`${UserOnlineCachePrefix}admin_${request.authUser.uid}`);
 
     if (isEmpty(cacheToken) || cacheToken !== token) {
       throw new UnauthorizedException();

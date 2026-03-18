@@ -13,7 +13,4 @@ export abstract class AbstractEntity {
 
   @CreateDateColumn({ name: 'create_time', type: 'timestamp' })
   createTime: Date;
-
-  @UpdateDateColumn({ name: 'update_time', type: 'timestamp' })
-  updateTime: Date;
 }

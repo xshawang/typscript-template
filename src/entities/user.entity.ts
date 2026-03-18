@@ -24,6 +24,9 @@ export class User extends AbstractEntity {
   @Column({ type: 'varchar', length: 45, nullable: true, comment: '注册ip' })
   ip: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: true, comment: '来源' })
-  channel: string;
+  @Column({ type: 'int',  nullable: true, comment: '景区id' })
+  channel: number;
+
+  @Column({ type: 'int',  nullable: true, comment: '营业站点' })
+  station: number;
 }

@@ -2,11 +2,12 @@ import { Controller, Post, Body, Req, Res, HttpCode, HttpStatus, Get, Param, Que
 import { UserService } from './user.service';
 import { SkipAuth } from '../../decorators/skip-auth.decorator';
 import { BaseResponse } from '../../common/response-wrapper';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LoginDto } from './dto/login.dto';
 import * as qrcode from 'qrcode';
 import { Readable } from 'stream';
+import { ScanDto } from './dto/scan.dto';
 
 
 @ApiTags('User')
@@ -62,14 +63,16 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '生成二维码' })
   @ApiResponse({ status: 200, description: '生成成功' })
-  @ApiQuery({ name: 'channel', required: false, example: 1001, description: '景区channel' })
+  @ApiQuery({ name: 'channel', required: false, example: 10001, description: '景区channel' })
+  @ApiQuery({ name: 'stationId', required: false, example: 10001, description: '景区营业站点' })
   async generateQRCode(
     @Res() res: FastifyReply,
-    @Query('channel') channel: string = '1001',
+    @Query('channel') channel: string = '10001',
+    @Query('stationId') stationId: string = '10001',
   ): Promise<void> {
     try {
       // 构建分享链接
-      const shareUrl = `http://192.168.1.3:7004/api/user/share/${channel}`;
+      const shareUrl = `http://192.168.1.3:7004/api/user/share/${channel}/${stationId}`;
       
       // 生成二维码图片的 Buffer
       const qrBuffer = await qrcode.toBuffer(shareUrl, {
@@ -88,21 +91,84 @@ export class UserController {
     }
   }
 
-  @Get('share/:channel')
+  // @Get('share/:channel')
+  // @SkipAuth()
+  // @HttpCode(HttpStatus.OK)
+  // @ApiOperation({ summary: '分享链接' })
+  // @ApiResponse({ status: 200, description: '访问成功' })
+  // async share(
+  //   @Param('channel') channel: string,
+  // ): Promise<BaseResponse<any>> {
+  //   try {
+  //     return BaseResponse.success({
+  //       channel,
+  //       message: `欢迎访问景区 ${channel} 的分享页面`,
+  //     }, '访问成功');
+  //   } catch (error) {
+  //     return BaseResponse.error(error.message || '访问失败', -1);
+  //   }
+  // }
+
+  @Post('scan')
   @SkipAuth()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '分享链接' })
-  @ApiResponse({ status: 200, description: '访问成功' })
-  async share(
-    @Param('channel') channel: string,
+  @ApiOperation({ summary: '用户扫码' })
+  @ApiResponse({ status: 200, description: '扫码成功' })
+  @ApiBody({ type: ScanDto })
+  async scan(
+    @Body() body: {
+      openId: string;
+      unionId: string;
+      nickName: string;
+      avatar: string;
+      phone: string;
+      channelId: number;
+      stationId: number;
+    },
+    @Req() req: FastifyRequest,
   ): Promise<BaseResponse<any>> {
     try {
-      return BaseResponse.success({
-        channel,
-        message: `欢迎访问景区 ${channel} 的分享页面`,
-      }, '访问成功');
+      const { openId, unionId, nickName, avatar, phone, channelId, stationId } = body;
+      
+      // Get client IP
+      const ip = req.headers['x-forwarded-for'] as string || 
+                 req.headers['x-real-ip'] as string || 
+                 req.socket.remoteAddress;
+      
+      const result = await this.userService.scan({
+        openId,
+        unionId,
+        nickName,
+        avatarUrl: avatar,
+        phoneNumber: phone,
+        channelId,
+        stationId,
+      }, ip);
+      return BaseResponse.success(result, '扫码成功');
     } catch (error) {
-      return BaseResponse.error(error.message || '访问失败', -1);
+      return BaseResponse.error(error.message || '扫码失败', -1);
+    }
+  }
+
+  @Post('order/pay')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '用户下单支付' })
+  @ApiResponse({ status: 200, description: '支付成功' })
+  async pay(
+    @Body() body: {
+      userId: number;
+      giftId: number;
+      channelId: number;
+      stationId: number;
+      num: number;
+    },
+  ): Promise<BaseResponse<any>> {
+    try {
+      const { userId, giftId, channelId, stationId, num } = body;
+      const result = await this.userService.pay(userId, giftId, channelId, stationId, num);
+      return BaseResponse.success(result, '支付成功');
+    } catch (error) {
+      return BaseResponse.error(error.message || '支付失败', -1);
     }
   }
 }

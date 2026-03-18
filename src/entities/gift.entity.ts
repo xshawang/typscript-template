@@ -16,5 +16,14 @@ export class Gift extends AbstractEntity {
   channelId: number;
 
   @Column({ type: 'tinyint', default: 0, comment: '销售状态 0-销售 1-不销售' })
-  vstatus: number; // 0 for sale, 1 for not for sale
+  vstatus: number;
+
+  @Column({ type: 'tinyint', name: 'gift_type', default: 0, comment: '物料类型，0 默认物料单件，1 对外销售的包装件' })
+  giftType: number; 
+  @Column({ type: 'varchar', length: 500, name: 'gift_desc', nullable: true, comment: '包装件，具体包含物料json如[{id:1,name:"登山杖",num:1},{id:2,name:"遮阳伞",num:1}]' })
+  giftDesc: string; 
+  @Column({ type: 'varchar', length: 255, name: 'gift_icon', nullable: true, comment: '包装件图标' })
+  giftIcon: string; 
+  @Column({ type: 'varchar', length: 255, name: 'remark', nullable: true, comment: '备注' })
+  remark: string; 
 }

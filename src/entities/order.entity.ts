@@ -3,13 +3,13 @@ import { AbstractEntity } from '../common/abstract.entity';
 
 @Entity('orders')
 export class Order extends AbstractEntity {
-  @Column({ type: 'varchar', length: 50, unique: true, nullable: false, comment: '订单编号' })
+  @Column({ type: 'varchar', name: 'order_no', length: 50, unique: true, nullable: false, comment: '订单编号' })
   orderNo: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: false, comment: '订单价格' })
+  @Column({ type: 'decimal', name: 'order_price', precision: 10, scale: 2, nullable: false, comment: '订单价格' })
   orderPrice: number;
 
-  @Column({ type: 'int', nullable: true, default: 1, comment: '数量' })
+  @Column({ type: 'int', name: 'order_num', nullable: true, default: 1, comment: '数量' })
   orderNum: number;
 
   @Column({ type: 'bigint', name: 'user_id', nullable: false, comment: '会员id' })

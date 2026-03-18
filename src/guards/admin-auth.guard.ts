@@ -40,20 +40,12 @@ export class AdminAuthGuard implements CanActivate {
       throw new UnauthorizedException();
     }
 
-    // Check if token is admin token (starts with 'admin_')
-    if (!token.startsWith('admin_')) {
-      throw new UnauthorizedException('Invalid admin token');
-    }
-
+   
     // Remove 'admin_' prefix for verification
-    const actualToken = token.substring('admin_'.length);
+    const actualToken = token.replace('Bearer','');
 
     try {
       const payload = this.jwtService.verify(actualToken);
-      // Ensure the payload has isAdmin flag
-      if (!payload.isAdmin) {
-        throw new UnauthorizedException('Invalid admin token');
-      }
       request.authUser = payload;
     } catch {
       throw new UnauthorizedException();
@@ -69,10 +61,12 @@ export class AdminAuthGuard implements CanActivate {
       .getClient()
       .get(`${UserOnlineCachePrefix}admin_${request.authUser.uid}`);
 
-    if (isEmpty(cacheToken) || cacheToken !== token) {
+    if (isEmpty(cacheToken) || cacheToken !== actualToken) {
       throw new UnauthorizedException();
     }
-
+    if(request.authUser.role !== 'admin'){
+      throw new UnauthorizedException('Permission denied');
+    }
     // can active
     return true;
   }

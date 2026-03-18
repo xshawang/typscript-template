@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SKIP_AUTH_DECORATOR_KEY } from '/@/decorators/skip-auth.decorator';
+import { ROLES_KEY } from '/@/decorators/roles.decorator';
 import { JwtService } from '@nestjs/jwt';
 import { isEmpty } from 'lodash';
 import { AppConfigService } from '/@/shared/services/app-config.service';
@@ -35,13 +36,15 @@ export class Authguard implements CanActivate {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
 
     // check the token is valid
-    const token = request.headers['authorization']?.trim();
+    let token = request.headers['authorization']?.trim();
+    console.log(token);
     if (isEmpty(token)) {
       throw new UnauthorizedException();
     }
-    console.log('请求token:', token);
+    token = token.replace('Bearer ', '');
     try {
       request.authUser = this.jwtService.verify(token);
+      console.log(request.authUser);
     } catch {
       throw new UnauthorizedException();
     }
@@ -50,16 +53,6 @@ export class Authguard implements CanActivate {
     if (isEmpty(request.authUser)) {
       throw new Error('jwt payload is invalid');
     }
-
-    // check is expired
-    const cacheToken = await this.redisService
-      .getClient()
-      .get(`${UserOnlineCachePrefix}${request.authUser.uid}`);
-
-    if (isEmpty(cacheToken) || cacheToken !== token) {
-      throw new UnauthorizedException();
-    }
-
     // can active
     return true;
   }

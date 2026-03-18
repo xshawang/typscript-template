@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, In } from 'typeorm';
+import { InjectRepository, InjectEntityManager } from '@nestjs/typeorm';
+import { Repository, MoreThan, In, EntityManager } from 'typeorm';
 import { User } from '../../entities/user.entity';
 import { Order } from '../../entities/order.entity';
 import { ChannelsStation } from '../../entities/channels-station.entity';
@@ -10,7 +10,8 @@ import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '@liaoliaots/nestjs-redis';
 import { UserOnlineCachePrefix } from '../../constants/cache';
 import { GiftStation } from '../../entities/gift-station.entity';
-
+import { OrderPayGiftDto, OrderPayDto } from './dto/order-pay.dto';
+import { BaseResponse } from '../../common/response-wrapper';
 @Injectable()
 export class UserService {
   constructor(
@@ -28,6 +29,8 @@ export class UserService {
     private redisService: RedisService,
     @InjectRepository(GiftStation)
     private giftStationRepository: Repository<GiftStation>,
+    @InjectEntityManager()
+    private entityManager: EntityManager,
   ) {}
 
   async loginOrRegister(wxUserInfo: any, ip: string): Promise<{ user: User; token: string }> {
@@ -55,7 +58,8 @@ export class UserService {
     const payload = { 
       uid: user.id, 
       accountId: user.id, 
-      nickname: user.nickName 
+      nickname: user.nickName,
+      role:'user'
     };
     const token = this.jwtService.sign(payload);
 
@@ -176,85 +180,157 @@ export class UserService {
     return { orders, gifts };
   }
 
-  async pay(userId: number, giftId: number, channelId: number, stationId: number, num: number): Promise<{ order: Order; orderItems: OrderItem[] }> {
-    // Get the gift
-    const gift = await this.giftRepository.findOne({ where: { id: giftId } });
-    if (!gift) {
-      throw new Error('物料不存在');
-    }
-
-    // Get the channel station
-    const channelStation = await this.giftStationRepository.findOne({
-      where: {
-        giftId,
-        channelId,
-        stationId,
-      },
-    });
-    if (!channelStation) {
-      throw new Error('景区站点物料不存在');
-    }
-
-    if (channelStation.saleNum < num) {
-      throw new Error('物料库存不足');
-    }
-
-    // Create order
-    const order = new Order();
-    order.orderNo = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
-    order.orderPrice = gift.giftPrice * num;
-    order.orderNum = num;
-    order.userId = userId;
-    order.createDate = new Date();
-    order.channelId = channelId;
-    order.returnFlag = 0;
-    order.returnPrice = 0;
-    order.brokePrice = 0;
-    order.returnSuccessFlag = 0;
-
-    const savedOrder = await this.orderRepository.save(order);
-
-    // Create order items
-    const orderItems = [];
-    if (gift.giftType === 1) {
-      // Packaging material, parse giftDesc
-      try {
-        const giftItems = JSON.parse(gift.giftDesc);
-        for (const item of giftItems) {
-          const orderItem = new OrderItem();
-          orderItem.orderNo = savedOrder.orderNo;
-          orderItem.giftId = item.id;
-          orderItem.giftName = item.name;
-          orderItem.giftNum = item.num * num;
-          orderItem.giftPrice = gift.giftPrice / giftItems.length;
-          orderItem.createDate = new Date();
-          orderItem.returnNum = 0;
-          
-          const savedItem = await this.orderItemRepository.save(orderItem);
-          orderItems.push(savedItem);
-        }
-      } catch (error) {
-        throw new Error('包装物料解析失败');
-      }
-    } else {
-      // Regular material
-      const orderItem = new OrderItem();
-      orderItem.orderNo = savedOrder.orderNo;
-      orderItem.giftId = giftId;
-      orderItem.giftName = channelStation.giftName;
-      orderItem.giftNum = num;
-      orderItem.giftPrice = gift.giftPrice;
-      orderItem.createDate = new Date();
-      orderItem.returnNum = 0;
+  async pay(
+    userId: number,  
+    channelId: number, 
+    stationId: number, 
+    price: number, 
+    gifts: OrderPayGiftDto[]
+  ): Promise<{ orderNo: string }> {
+    // 生成唯一锁键
+    const lockKey = `lock:order:${userId}:${Date.now()}`;
+    const redisClient = this.redisService.getClient();
+    
+    try {
+      // 尝试获取分布式锁，设置过期时间为10秒
+      const lockAcquired = await redisClient.set(lockKey, '1', 'EX', 10, 'NX');
       
-      const savedItem = await this.orderItemRepository.save(orderItem);
-      orderItems.push(savedItem);
+      if (!lockAcquired) {
+        throw new Error('系统繁忙，请稍后再试');
+      }
+      
+      // Get the gift
+      const orderGiftMap = new Map<number, OrderPayGiftDto>();
+      if (!gifts || !Array.isArray(gifts)) {
+         throw new Error('礼物列表不能为空');
+      }
+      gifts.forEach(item => {
+          orderGiftMap.set(Number(item.giftId), item);
+      });
+   
+    
+      // 开始事务
+      const result = await this.entityManager.transaction(async (manager) => {
+        const giftAll = await manager.find(Gift, { where: { channelId} });
+        if (!giftAll) {
+           throw new Error('物品不存在;'+channelId);
+        }
+        
+         const giftMap = new Map<number, Gift>();
+         giftAll.forEach((item) => {
+             giftMap.set(item.id, item);
+         })
+        // console.log('giftMap',giftMap);
+        
+        const validGifts = giftAll.filter((item) => orderGiftMap.has(Number(item.id)));
+        //console.log('validGifts',validGifts);
+        if (validGifts.length !== gifts.length) {
+           throw new Error('物品不存在');
+        }
+        let totalMoney = 0;
+        validGifts.forEach((item) => {
+          totalMoney += item.giftPrice * parseInt(orderGiftMap.get(item.id).num);
+        })
+        if(totalMoney !== price) {
+          throw new Error('金额不匹配');
+        }
+       
+        // Get the channel station
+        const channelStation = await manager.find(GiftStation, {
+          where: {
+            channelId,
+            stationId,
+            saleNum: MoreThan(0),
+          },
+        });
+        if (!channelStation) {
+          throw new Error('景区站点物料不存在');
+        }
+        //console.log('channelStation',channelStation);
+       const channelStations = channelStation.filter((item) => orderGiftMap.has(item.giftId));
+        if (channelStations.length != gifts.length) {
+          throw new Error('物品库存不足');
+        }
+         channelStations.forEach((item) => {
+          if(item.saleNum < parseInt(orderGiftMap.get(item.giftId).num)) {
+            throw new Error(item.giftName+' 物料库存不足');
+          }
+        })
+        const channelStationMap = new Map<number, GiftStation>();
+        channelStations.forEach((item) => {
+          channelStationMap.set(item.giftId, item);
+        })
+
+        // Create order
+        const order = new Order();
+        order.orderNo = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+        order.orderPrice = price;
+        order.orderNum = gifts.length;
+        order.userId = userId;
+        order.createDate = new Date();
+        order.channelId = channelId;
+        order.returnFlag = 0;
+        order.returnPrice = 0;
+        order.brokePrice = 0;
+        order.returnSuccessFlag = 0;
+
+        const savedOrder = await manager.save(order);
+
+        // Create order items
+        const orderItems = [];
+        for (const item of gifts) {
+          let gift = giftMap.get(Number(item.giftId));
+          let channelStation = channelStationMap.get(Number(item.giftId));  
+          if (gift.giftType === 1) {
+            // Packaging material, parse giftDesc
+            try {
+              const giftItems = JSON.parse(gift.giftDesc);
+              for (const giftItem of giftItems) {
+                const orderItem = new OrderItem();
+                orderItem.orderNo = savedOrder.orderNo;
+                orderItem.giftId = giftItem.id;
+                orderItem.giftName = giftItem.name;
+                orderItem.giftNum = giftItem.num * Number(item.num);
+                orderItem.giftPrice = giftItem.giftPrice * Number(item.num);
+                orderItem.createDate = new Date();
+                orderItem.returnNum = 0;
+                const savedItem = await manager.save(orderItem);
+                orderItems.push(savedItem);
+              }
+            } catch (error) {
+              throw new Error('包装物料解析失败');
+            }
+          } else {
+            // Regular material
+            const orderItem = new OrderItem();
+            orderItem.orderNo = savedOrder.orderNo;
+            orderItem.giftId = gift.id;
+            orderItem.giftName = channelStation.giftName;
+            orderItem.giftNum = Number(item.num);
+            orderItem.giftPrice = gift.giftPrice * Number(item.num);
+            orderItem.createDate = new Date();
+            orderItem.returnNum = 0;
+            const savedItem = await manager.save(orderItem);
+            orderItems.push(savedItem);
+          }
+
+          // Update saleNum
+          channelStation.saleNum -= Number(item.num);
+          await manager.save(channelStation);
+          //todo  需要实现 微信支付逻辑。
+        }
+        
+        return { orderNo: savedOrder.orderNo };
+      });
+      
+      // 释放锁
+      await redisClient.del(lockKey);
+      
+      return result;
+    } catch (error) {
+      // 释放锁
+      await redisClient.del(lockKey);
+      throw error;
     }
-
-    // Update saleNum
-    channelStation.saleNum -= num;
-    await this.channelsStationRepository.save(channelStation);
-
-    return { order: savedOrder, orderItems };
   }
 }

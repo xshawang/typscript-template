@@ -1,13 +1,17 @@
-import { Controller, Post, Body, Req, Res, HttpCode, HttpStatus, Get, Param, Query } from '@nestjs/common';
+import { Controller, Post, Body, Req, Res, HttpCode, HttpStatus, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { SkipAuth } from '../../decorators/skip-auth.decorator';
 import { BaseResponse } from '../../common/response-wrapper';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LoginDto } from './dto/login.dto';
 import * as qrcode from 'qrcode';
 import { Readable } from 'stream';
 import { ScanDto } from './dto/scan.dto';
+import { OrderPayDto ,OrderPayGiftDto} from './dto/order-pay.dto';
+import { UserAuthGuard } from '../../guards/user-auth.guard';
+import { AuthUser } from '../../decorators/auth-user.decorator';
+import { IAuthUser } from '../../interfaces/auth';
 
 
 @ApiTags('User')
@@ -151,21 +155,22 @@ export class UserController {
   }
 
   @Post('order/pay')
+  @UseGuards(UserAuthGuard)
+  @ApiBearerAuth('user') 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '用户下单支付' })
   @ApiResponse({ status: 200, description: '支付成功' })
+  @ApiBody({ type: OrderPayDto })
   async pay(
-    @Body() body: {
-      userId: number;
-      giftId: number;
-      channelId: number;
-      stationId: number;
-      num: number;
-    },
+    @AuthUser() user: IAuthUser,
+    @Body() body: OrderPayDto,
   ): Promise<BaseResponse<any>> {
     try {
-      const { userId, giftId, channelId, stationId, num } = body;
-      const result = await this.userService.pay(userId, giftId, channelId, stationId, num);
+      console.log('请求入参',body)
+      const { channelId, stationId, price, orderPayGifts } = body;
+      const userId = Number(user.uid);
+      console.log('用户ID',userId);
+      const result = await this.userService.pay(userId, Number(channelId), Number(stationId), Number(price), orderPayGifts);
       return BaseResponse.success(result, '支付成功');
     } catch (error) {
       return BaseResponse.error(error.message || '支付失败', -1);

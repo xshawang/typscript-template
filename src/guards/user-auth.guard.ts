@@ -35,16 +35,17 @@ export class UserAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
 
     // check the token is valid
-    const token = request.headers['authorization']?.trim();
+    let token = request.headers['authorization']?.trim();
     if (isEmpty(token)) {
       throw new UnauthorizedException();
     }
-
+    console.log('user token :',token);
     // Check if token is admin token (starts with 'admin_')
     if (token.startsWith('admin_')) {
       throw new UnauthorizedException('Invalid user token');
     }
-
+    token = token.replace('Bearer ', '');
+    console.log('user token after replace:',token);
     try {
       request.authUser = this.jwtService.verify(token);
     } catch {
@@ -64,7 +65,9 @@ export class UserAuthGuard implements CanActivate {
     if (isEmpty(cacheToken) || cacheToken !== token) {
       throw new UnauthorizedException();
     }
-
+    if(request.authUser.role !== 'user'){
+      throw new UnauthorizedException('Permission denied');
+    }
     // can active
     return true;
   }

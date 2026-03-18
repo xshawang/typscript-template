@@ -41,7 +41,7 @@ export class AdminController {
         userInfo: {
           id: admin.id,
           username: admin.username,
-          role: admin.role,
+          role: 'admin',
         },
       }, '登录成功');
     } catch (error) {
@@ -51,7 +51,7 @@ export class AdminController {
 
   @Post('gift/edit')
   @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '操作员修改景区物料表中价格以及是否销售' })
   @ApiResponse({ status: 200, description: '修改成功' })
@@ -85,7 +85,7 @@ export class AdminController {
 
   @Post('gift/process')
   @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '操作员确认退还' })
   @ApiResponse({ status: 200, description: '处理成功' })
@@ -113,7 +113,7 @@ export class AdminController {
 
   @Post('channel/add')
   @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '管理员增加/修改景区信息' })
   @ApiResponse({ status: 200, description: '操作成功' })
@@ -144,7 +144,7 @@ export class AdminController {
 
   @Post('gift/add')
   @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '管理员增加/修改景区物料' })
   @ApiResponse({ status: 200, description: '操作成功' })
@@ -174,7 +174,7 @@ export class AdminController {
 
   @Get('data/list')
   @UseGuards(AdminAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '管理员查看数据看板' })
   @ApiResponse({ status: 200, description: '获取成功' })

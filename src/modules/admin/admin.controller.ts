@@ -6,15 +6,18 @@ import { AdminAuthGuard } from '../../guards/admin-auth.guard';
 import { AuthUser } from '../../decorators/auth-user.decorator';
 import { IAuthUser } from '../../interfaces/auth';
 import { BaseResponse, ListResponse, PaginationResponse, PaginationInfo } from '../../common/response-wrapper';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { AdminLoginDto } from './dto/admin-login.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { AdminLoginDto, ProcessRefundDto } from './dto/admin-login.dto';
+import { OrderService } from '../order/order.service';
 
 @ApiTags('Admin')
 @Controller('admin/member')
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
+    private readonly orderService: OrderService,
     private readonly adminOperationsService: AdminOperationsService,
+      
   ) {}
 
   @Post('login')
@@ -30,7 +33,7 @@ export class AdminController {
         return BaseResponse.error('用户名和密码不能为空');
       }
 
-      const { admin, token } = await this.adminService.login(
+      const { admin, token,roleType } = await this.adminService.login(
         loginDto.userName,
         loginDto.password,
         loginDto.deviceId
@@ -42,6 +45,7 @@ export class AdminController {
           id: admin.id,
           username: admin.username,
           role: 'admin',
+          roleType:roleType,
         },
       }, '登录成功');
     } catch (error) {
@@ -91,15 +95,14 @@ export class AdminController {
   @ApiResponse({ status: 200, description: '处理成功' })
   async processRefund(
     @AuthUser() user: IAuthUser,
-    @Body() processDto: { orderNo: string },
+    @Body() processDto: ProcessRefundDto,
   ): Promise<BaseResponse<any>> {
     try {
       if (!processDto.orderNo) {
         return BaseResponse.error('请提供订单编号');
       }
 
-      const order = await this.adminOperationsService.processRefund(processDto.orderNo);
-
+      const order = await this.adminOperationsService.processRefund(processDto);
       return BaseResponse.success({
         orderNo: order.orderNo,
         returnSuccessFlag: order.returnSuccessFlag,

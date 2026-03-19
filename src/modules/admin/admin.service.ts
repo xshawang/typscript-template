@@ -19,7 +19,7 @@ export class AdminService {
   async validateAdmin(username: string, password: string): Promise<Admin> {
     // MD5 hash the password
     const hashedPassword = crypto.createHash('md5').update(password).digest('hex');
-    
+    console.log('username', username, '  password:', password, '   hashedPassword', hashedPassword);
     const admin = await this.adminRepository.findOne({
       where: { username, password: hashedPassword },
     });
@@ -27,7 +27,7 @@ export class AdminService {
     return admin;
   }
 
-  async login(username: string, password: string, deviceId: string): Promise<{ admin: Admin; token: string }> {
+  async login(username: string, password: string, deviceId: string): Promise<{ admin: Admin; token: string; roleType: number; }> {
     const admin = await this.validateAdmin(username, password);
     
     if (!admin) {
@@ -45,7 +45,8 @@ export class AdminService {
       uid: admin.id, 
       accountId: admin.id, 
       nickname: admin.username,
-      isAdmin: true
+      role: 'admin',
+      roleType:admin.role
     };
     const token = this.jwtService.sign(payload, { expiresIn: '24h' });
 
@@ -55,8 +56,8 @@ export class AdminService {
       24 * 60 * 60, // 24 hours
       `admin_${token}`,
     );
-
-    return { admin, token: `admin_${token}` };
+    
+    return { admin, token: `${token}`,roleType:admin.role };
   }
 
   async findById(id: number): Promise<Admin> {

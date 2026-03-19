@@ -1,6 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsString, MaxLength, IsOptional } from 'class-validator';
 
+export class ProcessRefundDto {
+  @ApiProperty({ example: 'ORD1773827966184402', description: '订单编号' })
+  @IsString()
+  @MaxLength(32)
+  orderNo: string;
+  items:ProcessRefundItemDto[];
+}
+
+export class ProcessRefundItemDto {
+  @ApiProperty({ example: '1', description: '物品ID' })
+  @IsString()
+  @MaxLength(32)
+  giftId: string;
+
+  @ApiProperty({ example: '2', description: '赔偿金额' })
+  @IsString()
+  @MaxLength(32)
+  cost: string;
+}
 export class AdminLoginDto {
   @ApiProperty({ example: 'admin', description: '用户名' })
   @IsString()

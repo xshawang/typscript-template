@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Gift } from '../../../entities/gift.entity';
 import { Channel } from '../../../entities/channel.entity';
 import { Order } from '../../../entities/order.entity';
+import { ProcessRefundDto } from '../dto/admin-login.dto';
+import { OrderItem } from '../../../entities/order-item.entity';
 
 @Injectable()
 export class AdminOperationsService {
@@ -14,6 +16,8 @@ export class AdminOperationsService {
     private channelRepository: Repository<Channel>,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
+    @InjectRepository(OrderItem)
+    private orderItemRepository: Repository<OrderItem>,
   ) {}
 
   async updateGift(giftId: number, updateData: { giftPrice?: number; giftNum?: number; vstatus?: number }): Promise<Gift> {
@@ -37,8 +41,8 @@ export class AdminOperationsService {
     return await this.giftRepository.save(gift);
   }
 
-  async processRefund(orderNo: string): Promise<Order> {
-    const order = await this.orderRepository.findOne({ where: { orderNo } });
+  async processRefund(processDto: ProcessRefundDto): Promise<Order> {
+    const order = await this.orderRepository.findOne({ where: { orderNo: processDto.orderNo } });
     
     if (!order) {
       throw new Error('订单不存在');
@@ -47,16 +51,25 @@ export class AdminOperationsService {
     if (order.returnSuccessFlag === 1) {
       throw new Error('订单已处理退还');
     }
-
-    if (!order.returnDate) {
-      throw new Error('订单尚未申请退还');
+    if(processDto.items.length === 0) {
+      throw new Error('请选择要退还的物品');
     }
+    const orderItemMap = new Map(processDto.items.map(item => [item.giftId, item]));
+    // if (!order.returnDate) {
+    //   throw new Error('订单尚未申请退还');
+    // }
 
+    const refundAmount = processDto.items.reduce((acc, item) => acc + Number(item.cost), 0);
+    if (refundAmount > order.orderPrice) {
+      throw new Error('退款金额不能超过订单金额');
+    }
+    order.returnDate = new Date();
     // Process the refund
     order.returnSuccessDate = new Date();
     order.returnSuccessFlag = 1;
-    order.returnPrice = order.orderPrice; // Full refund
+    order.returnPrice = refundAmount; // Full refund
 
+    const orderItems = await this.orderItemRepository.find({ where: { orderNo: processDto.orderNo } });
     return await this.orderRepository.save(order);
   }
 

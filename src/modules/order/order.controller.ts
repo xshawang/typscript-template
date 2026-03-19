@@ -84,7 +84,7 @@ export class OrderController {
 
   @Post('apply')
   @UseGuards(UserAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('user') 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '申请退还' })
   @ApiResponse({ status: 200, description: '申请成功' })

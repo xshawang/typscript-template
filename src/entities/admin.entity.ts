@@ -9,7 +9,7 @@ export class Admin extends AbstractEntity {
   @Column({ type: 'varchar', length: 255, nullable: false, comment: '密码(MD5加密)' })
   password: string;
 
-  @Column({ type: 'varchar', length: 50, unique: true, nullable: true, comment: '设备ID' })
+  @Column({ type: 'varchar', name: 'device_id', length: 50, unique: true, nullable: true, comment: '设备ID' })
   deviceId: string;
 
   @Column({ type: 'tinyint', nullable: true, default: 1, comment: '角色 1-操作员 2-管理员' })

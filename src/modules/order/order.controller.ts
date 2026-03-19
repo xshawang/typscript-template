@@ -4,9 +4,11 @@ import { UserAuthGuard } from '../../guards/user-auth.guard';
 import { AuthUser } from '../../decorators/auth-user.decorator';
 import { IAuthUser } from '../../interfaces/auth';
 import { BaseResponse, ListResponse } from '../../common/response-wrapper';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { PayDepositDto } from '../user/dto/pay-deposit.dto';
 import { ApplyRefundDto } from '../user/dto/apply-refund.dto';
+import { OrderItem } from './../../entities/order-item.entity';
+
 
 @ApiTags('Order')
 @Controller('user')
@@ -49,39 +51,34 @@ export class OrderController {
 
   @Get('noProcessOrderList')
   @UseGuards(UserAuthGuard)
-  @ApiBearerAuth()
+  @ApiBearerAuth('user') 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '获取未处理订单列表' })
   @ApiResponse({ status: 200, description: '获取成功' })
   async getNoProcessOrderList(
     @AuthUser() user: IAuthUser,
-  ): Promise<ListResponse<any>> {
+  ): Promise<BaseResponse<any>> {
     try {
       const orders = await this.orderService.getUserOrdersWithNoRefund(Number(user.uid));
-
-      // Format the response to match the expected structure
+      if(orders == null || orders.length === 0) {
+        return BaseResponse.success([], '暂无未归还的物品');
+      }
+      const orderGifts: OrderItem[] = await this.orderService.getOrderGiftByOrderId(orders.map(order => order.orderNo));
+      let orderGiftMap = new Map<string, OrderItem[]>();
+      orderGifts.forEach(item => {
+        orderGiftMap.set(item.orderNo, [...(orderGiftMap.get(item.orderNo) || []), item]);
+      });
       const formattedOrders = orders.map(order => ({
         id: order.id,
         orderNo: order.orderNo,
         orderPrice: order.orderPrice,
         orderNum: order.orderNum,
-        userId: order.userId,
-        createDate: order.createDate,
-        payDate: order.payDate,
-        callbackDate: order.callbackDate,
-        payChannel: order.payChannel,
-        channelId: order.channelId,
-        returnDate: order.returnDate,
-        returnFlag: order.returnFlag,
-        returnPrice: order.returnPrice,
-        brokePrice: order.brokePrice,
-        returnSuccessDate: order.returnSuccessDate,
-        returnSuccessFlag: order.returnSuccessFlag,
+        orderGifts: orderGiftMap.get(order.orderNo) || [],
       }));
 
-      return ListResponse.list(formattedOrders, '获取成功');
+      return BaseResponse.success(formattedOrders, '获取成功');
     } catch (error) {
-      return ListResponse.list([], error.message || '获取订单列表失败');
+      return BaseResponse.error(error.message || '获取订单列表失败', -1);
     }
   }
 

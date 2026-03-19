@@ -108,7 +108,16 @@ export class OrderService {
       .orderBy('order.createDate', 'DESC')
       .getMany();
   }
-
+async getOrderGiftByOrderId(orderNos: string[]): Promise<OrderItem[]> {
+    if (!orderNos || orderNos.length === 0) {
+      return [];
+    }
+    return await this.orderItemRepository
+      .createQueryBuilder('orderItem')
+      .where('orderItem.orderNo IN (:...orderNos)', { orderNos })
+      .orderBy('orderItem.orderNo', 'DESC')
+      .getMany();
+  }
   async applyForRefund(orderNo: string, userId: number): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { orderNo, userId }

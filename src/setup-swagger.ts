@@ -31,6 +31,7 @@ const documentBuilder = new DocumentBuilder()
     {
       type: 'http',
       scheme: 'bearer',
+      bearerFormat: 'JWT',
     },
     'admin', // 👈 后台
   );
